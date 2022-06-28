@@ -47,3 +47,39 @@ jobs:
         author: ${{ github.event.pusher.name }}
         environment: UAT
         tag: ${TAG}
+  deploy_PROD:
+    needs: run_Tests_UAT
+    name: Manual_Deploy_PROD
+    runs-on: ubuntu-latest
+    environment:
+      name: triggerProdDeploy
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Sync my theme
+        env:
+          source: './storefront/'
+          destination: 'bcivel@34.79.152.162:/var/www/html/wp-content/themes/storefront/'  
+        run: |
+          echo "${{secrets.DEPLOY_KEY}}" > deploy_key
+          chmod 600 ./deploy_key
+          sudo rsync -chav --delete \
+            -e 'ssh -i ./deploy_key -o StrictHostKeyChecking=no' \
+            --exclude /sass \
+            ${{env.source}} ${{env.destination}}
+  run_Tests_PROD:
+    needs: deploy_PROD
+    name: Run_Tests_PROD
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: cerberus-action
+      uses: cerberustesting/cerberus-github-action@v6
+      with:
+        host: https://jftl.cerberus-testing.fr
+        campaign: SanityCheck
+        apikey: ${{ secrets.APIKEY }}
+        author: ${{ github.event.pusher.name }}
+        environment: PROD
+        tag: ${TAG}
