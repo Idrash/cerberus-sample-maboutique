@@ -32,6 +32,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  deploy_UAT:
+    needs: sonarcloud
+    name: Deploy_UAT
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Sync my theme
+        env:
+          source: './storefront/'  
+          destination: 'bcivel@35.195.196.219:/var/www/html/wp-content/themes/storefront/' 
+        run: |
+          echo "${{secrets.DEPLOY_KEY_UAT}}" > deploy_key
+          chmod 600 ./deploy_key
+          sudo rsync -chav --delete \
+            -e 'ssh -i ./deploy_key -o StrictHostKeyChecking=no' \
+            --exclude /sass \
+            ${{env.source}} ${{env.destination}}
   run_Tests_UAT:
     needs: sonarcloud
     name: Run_Tests_UAT
